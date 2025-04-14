@@ -107,46 +107,58 @@ exports.getLogsByDate = async (req, res) => {
 //post req
 
 exports.createLog = async (req, res) => {
-    const { employeeName, services, customFaceCleanPrice } = req.body; // استقبال سعر تنظيف البشرة إذا كان موجودًا
-
-    const servicePrices = {
-        'قص شعر وتصفيف': 130,
-        'حلاقة شعر': 70,
-        'دقن': 60,
-        'قص أطفال (ولاد)': 50,
-        'قص أطفال (بنات)': 80,
-        'استشوار شعر': 60,
-        'مكوى بيبي ليس': 60,
-        'توبيك تكثيف': 20,
-        'صبغة شعر أسود': 110,
-        'رش ألوان': 15,
-        'شمع أو فتلة': 20,
-        'تنظيف بشرة': 20, // السعر الافتراضي لتنظيف البشرة
-    };
-
-    // إذا كانت الخدمة "تنظيف بشرة" تم تعديل السعر بناءً على المدخل من اليوزر
-    if (services.includes('تنظيف بشرة') && customFaceCleanPrice) {
-        servicePrices['تنظيف بشرة'] = customFaceCleanPrice; // استخدام السعر المدخل من اليوزر
-    }
-
-    let totalPrice = 0;
-    if (services && services.length > 0) {
-        totalPrice = services.reduce((sum, service) => sum + (servicePrices[service] || 0), 0);
-    }
-
-    const newLog = new EmployeeWorkLog({
-        employeeName,
-        services,
-        totalPrice
-    });
-
     try {
+        const { employeeName, services, customFaceCleanPrice } = req.body;
+
+        // Validation أولي للمدخلات
+        if (!employeeName || !Array.isArray(services) || services.length === 0) {
+            return res.status(400).json({ message: 'برجاء إدخال اسم الموظف والخدمات المطلوبة.' });
+        }
+
+        const servicePrices = {
+            'قص شعر وتصفيف': 130,
+            'حلاقة شعر': 70,
+            'دقن': 60,
+            'قص أطفال (ولاد)': 50,
+            'قص أطفال (بنات)': 80,
+            'استشوار شعر': 60,
+            'مكوى بيبي ليس': 60,
+            'توبيك تكثيف': 20,
+            'صبغة شعر أسود': 110,
+            'رش ألوان': 15,
+            'شمع أو فتلة': 20,
+            'تنظيف بشرة': 20, // السعر الافتراضي
+        };
+
+        // تعديل السعر لو فيه customFaceCleanPrice
+        if (services.includes('تنظيف بشرة') && customFaceCleanPrice) {
+            servicePrices['تنظيف بشرة'] = customFaceCleanPrice;
+        }
+
+        // حساب الإجمالي
+        const totalPrice = services.reduce((sum, service) => {
+            const price = servicePrices[service];
+            if (!price) {
+                console.warn(`تنبيه: الخدمة "${service}" غير معرفة في قائمة الأسعار.`);
+            }
+            return sum + (price || 0);
+        }, 0);
+
+        const newLog = new EmployeeWorkLog({
+            employeeName,
+            services,
+            totalPrice
+        });
+
         const savedLog = await newLog.save();
         res.status(201).json(savedLog);
+
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('حدث خطأ أثناء إنشاء السجل:', error);
+        res.status(500).json({ message: 'حدث خطأ في السيرفر. برجاء المحاولة لاحقًا.' });
     }
 };
+
 
 
 
