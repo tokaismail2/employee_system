@@ -182,20 +182,6 @@ exports.deleteLogsByDate = async (req, res) => {
     }
 };
 
-exports.deleteLogsOfLastMonth = async (req, res) => {
-    try {
-        const today = new Date();
-        const lastMonth = new Date();
-        lastMonth.setMonth(today.getMonth() - 1);
 
-        const result = await EmployeeWorkLog.deleteMany({
-            createdAt: { $gte: lastMonth, $lte: today }
-        });
-
-        res.status(200).json({ message: 'Last month logs deleted successfully', deletedCount: result.deletedCount });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
 
 
